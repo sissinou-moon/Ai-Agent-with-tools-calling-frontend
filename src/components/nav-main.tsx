@@ -14,6 +14,7 @@ import {
   ZapIcon,
   CalendarIcon,
   WebhookIcon,
+  LinkIcon,
 } from "lucide-react";
 
 const navItems = [
@@ -37,7 +38,13 @@ const navItems = [
     href: "/webhook",
     icon: WebhookIcon,
   },
+  {
+    title: "Connections",
+    href: "/connections",
+    icon: LinkIcon,
+  },
 ];
+
 
 export function NavMain() {
   const pathname = usePathname();
