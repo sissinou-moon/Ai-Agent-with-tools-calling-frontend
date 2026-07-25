@@ -21,6 +21,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { ChevronsUpDownIcon, SparklesIcon, BadgeCheckIcon, CreditCardIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { clearAuthCookies } from "@/features/auth/actions"
+
 
 export function NavUser({
   user,
@@ -32,6 +35,8 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -98,12 +103,17 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOutIcon
-              />
+            <DropdownMenuItem
+              onClick={async () => {
+                await clearAuthCookies();
+                router.replace("/login");
+              }}
+            >
+              <LogOutIcon />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
+
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>

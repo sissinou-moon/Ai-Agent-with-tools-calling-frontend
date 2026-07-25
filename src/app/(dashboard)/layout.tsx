@@ -9,7 +9,9 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset className="overflow-hidden rounded-[var(--radius)] border border-border m-2 shadow-sm">
+        {children}
+      </SidebarInset>
     </SidebarProvider>
   );
 }
