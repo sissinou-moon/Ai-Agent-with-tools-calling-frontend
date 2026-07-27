@@ -10,21 +10,18 @@ export interface ToolCall {
 
 export interface Message {
     id: string;
-    role: MessageRole;
 
-    // main content
+    role: "user" | "assistant";
+
     content: string;
 
-    // optional metadata from backend
-    thinking?: string | null;
-    images?: string[] | null;
-    toolName?: string | null;
-    toolCalls?: ToolCall[] | null;
-
-    // ui state
-    status?: "pending" | "success" | "error";
+    thinking?: string;
 
     createdAt: Date;
+
+    status: MessageStatus;
+
+    tools: ToolExecution[];
 }
 
 export interface Conversation {
@@ -46,4 +43,24 @@ export interface SendMessageResponse {
         tool_name?: string | null;
         tool_calls?: ToolCall[] | null;
     };
+}
+
+export type MessageStatus =
+    | "pending"
+    | "running"
+    | "completed"
+    | "error";
+
+export interface ToolExecution {
+    id: string;
+
+    name: string;
+
+    status: MessageStatus;
+
+    arguments: Record<string, unknown>;
+
+    result?: unknown;
+
+    error?: string;
 }

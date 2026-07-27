@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
-import type { Conversation, Message } from "../types";
+import type { Conversation, Message, MessageStatus, ToolExecution } from "../types";
 import { useMutation } from "@tanstack/react-query";
 import { sendMessage as sendMessageApi } from "../api/send-message";
+import { mapAssistantMessage } from "../mapper";
+import { toolRegistry } from "@/features/tools/registry";
+import { useConnectionStatus } from "@/features/connections/hooks/use-connection-status";
 
 
 export function useConversation() {
@@ -24,6 +27,19 @@ export function useConversation() {
     const activeConversation = useMemo(
         () => conversations.find((c) => c.id === activeId)!,
         [conversations, activeId]
+    );
+
+    const { data: connections = [] } = useConnectionStatus();
+
+    const connectionMap = useMemo(
+        () =>
+            Object.fromEntries(
+                connections.map((connection) => [
+                    connection.app,
+                    connection,
+                ])
+            ),
+        [connections]
     );
 
     const addConversation = () => {
@@ -74,28 +90,64 @@ export function useConversation() {
         );
     };
 
+    const updateToolStatus = (
+        conversationId: string,
+        messageId: string,
+        toolId: string,
+        status: MessageStatus,
+        result?: unknown,
+        error?: string
+    ) => {
+        updateConversation(conversationId, (conversation) => ({
+            ...conversation,
+            messages: conversation.messages.map((message) => {
+                if (message.id !== messageId) {
+                    return message;
+                }
+
+                return {
+                    ...message,
+                    tools: message.tools.map((tool) => {
+                        if (tool.id !== toolId) {
+                            return tool;
+                        }
+
+                        return {
+                            ...tool,
+                            status,
+                            result,
+                            error,
+                        };
+                    }),
+                };
+            }),
+        }));
+    };
+
     const sendMessage = async () => {
+        const placeholderId = crypto.randomUUID();
         const assistantPlaceholder: Message = {
-            id: crypto.randomUUID(),
+            id: placeholderId,
             role: "assistant",
             content: "",
             thinking: "Thinking...",
             createdAt: new Date(),
+            status: "running",
+            tools: []
         };
         try {
             if (!input.trim()) return;
+            const content = input.trim();
+
 
             const userMessage: Message = {
                 id: crypto.randomUUID(),
                 role: "user",
-                content: input,
+                content,
                 createdAt: new Date(),
+                status: "completed",
+                tools: []
             };
-
-            updateConversation(activeId, (conversation) => ({
-                ...conversation,
-                messages: [...conversation.messages, userMessage],
-            }));
 
             setInput("");
 
@@ -103,6 +155,7 @@ export function useConversation() {
                 ...conversation,
                 messages: [
                     ...conversation.messages,
+                    userMessage,
                     assistantPlaceholder,
                 ],
             }));
@@ -111,26 +164,23 @@ export function useConversation() {
                 message: userMessage.content,
             });
 
-            const assistantMessage: Message = {
-                id: crypto.randomUUID(),
-                role: "assistant",
-                content: response.message.content ?? "",
-                thinking: response.message.thinking ?? null,
-                createdAt: new Date(),
-            };
+            const assistantMessage =
+                mapAssistantMessage(response, placeholderId);
 
             updateConversation(activeId, (conversation) => ({
                 ...conversation,
                 messages: conversation.messages.map((message) =>
                     message.id === assistantPlaceholder.id
-                        ? {
-                            ...message,
-                            content: response.message.content ?? "",
-                            thinking: response.message.thinking ?? null,
-                        }
+                        ? assistantMessage
                         : message
                 ),
             }));
+
+            await executeTools(
+                activeId,
+                assistantMessage.id,
+                assistantMessage.tools
+            );
         } catch (error) {
             updateConversation(activeId, (conversation) => ({
                 ...conversation,
@@ -138,12 +188,77 @@ export function useConversation() {
                     message.id === assistantPlaceholder.id
                         ? {
                             ...message,
+                            status: "error",
                             content: "Something went wrong. Please try again.",
-                            thinking: null,
+                            thinking: "",
                         }
                         : message
                 ),
             }));
+        }
+    };
+
+    const executeTools = async (
+        conversationId: string,
+        messageId: string,
+        tools: ToolExecution[]
+    ) => {
+        for (const tool of tools) {
+            try {
+                updateToolStatus(
+                    conversationId,
+                    messageId,
+                    tool.id,
+                    "running"
+                );
+
+                const executor = toolRegistry[
+                    tool.name as keyof typeof toolRegistry
+                ];
+
+                if (!executor) {
+                    throw new Error(`No executor found for ${tool.name}`);
+                }
+
+                const registry =
+                    toolRegistry[
+                    tool.name as keyof typeof toolRegistry
+                    ];
+
+                if (!registry) {
+                    throw new Error(`Unknown tool ${tool.name}`);
+                }
+
+                const connection =
+                    connectionMap[registry.app];
+
+                if (!connection) {
+                    throw new Error(`${registry.app} is not connected.`);
+                }
+
+                const result = await registry.execute({
+                    connection,
+                    tool,
+                });
+                updateToolStatus(
+                    conversationId,
+                    messageId,
+                    tool.id,
+                    "completed",
+                    result
+                );
+            } catch (error) {
+                updateToolStatus(
+                    conversationId,
+                    messageId,
+                    tool.id,
+                    "error",
+                    undefined,
+                    error instanceof Error
+                        ? error.message
+                        : "Unknown error"
+                );
+            }
         }
     };
 
@@ -159,6 +274,8 @@ export function useConversation() {
         removeConversation,
         setActiveId,
         updateConversation,
-        sendMessage
+        sendMessage,
+
+        updateToolStatus
     };
 }

@@ -1,19 +1,41 @@
-import { Message, SendMessageResponse } from "./types";
+import type {
+    Message,
+    SendMessageResponse,
+    ToolExecution,
+} from "./types";
 
 export function mapAssistantMessage(
-    response: SendMessageResponse
+    response: SendMessageResponse,
+    messageId: string
 ): Message {
-    const msg = response.message;
+    const tools: ToolExecution[] =
+        response.message.tool_calls?.map((toolCall) => ({
+            id: crypto.randomUUID(),
+
+            name: toolCall.function.name,
+
+            status: "pending",
+
+            arguments: toolCall.function.arguments,
+
+            result: undefined,
+
+            error: undefined,
+        })) ?? [];
 
     return {
-        id: crypto.randomUUID(),
+        id: messageId,
+
         role: "assistant",
-        content: msg.content ?? "",
-        thinking: msg.thinking ?? null,
-        images: msg.images ?? null,
-        toolName: msg.tool_name ?? null,
-        toolCalls: msg.tool_calls ?? null,
-        status: "success",
+
+        content: response.message.content ?? "",
+
+        thinking: response.message.thinking ?? "",
+
         createdAt: new Date(),
+
+        status: "completed",
+
+        tools,
     };
 }

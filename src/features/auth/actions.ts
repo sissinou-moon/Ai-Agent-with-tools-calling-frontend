@@ -7,10 +7,6 @@ import {
     REFRESH_TOKEN_MAX_AGE,
 } from "./constants";
 
-/**
- * Sets both auth tokens as httpOnly cookies.
- * Must be called from a Server Action context.
- */
 export async function setAuthCookies(
     accessToken: string,
     refreshToken: string
