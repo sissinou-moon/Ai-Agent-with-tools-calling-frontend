@@ -8,12 +8,33 @@ import type { ConnectionStatus, SaveConnectionPayload, SaveConnectionResponse } 
 export async function fetchConnectionStatus(): Promise<ConnectionStatus[]> {
     const cookieStore = await cookies();
     let accessToken = cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN)?.value;
-
-    if (!accessToken) {
-        return [];
-    }
-
     const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+    // If no access token is found, attempt to refresh immediately using the refresh token
+    if (!accessToken) {
+        const refreshToken = cookieStore.get(COOKIE_NAMES.REFRESH_TOKEN)?.value;
+        if (!refreshToken) {
+            return [];
+        }
+
+        const refreshResponse = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+
+        if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json();
+            // Save new tokens in cookies
+            await setAuthCookies(refreshData.access_token, refreshData.refresh_token);
+            accessToken = refreshData.access_token;
+        } else {
+            await clearAuthCookies();
+            return [];
+        }
+    }
 
     // 1. Initial attempt to get connection status
     let response = await fetch(`${API_URL}/api/v1/connection/status`, {
@@ -27,7 +48,7 @@ export async function fetchConnectionStatus(): Promise<ConnectionStatus[]> {
         return response.json();
     }
 
-    // 2. If 401 Unauthorized, attempt to refresh tokens
+    // 2. If 401 Unauthorized, attempt to refresh tokens (e.g., if token expired during request)
     if (response.status === 401) {
         const refreshToken = cookieStore.get(COOKIE_NAMES.REFRESH_TOKEN)?.value;
 

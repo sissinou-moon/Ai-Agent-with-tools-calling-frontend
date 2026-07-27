@@ -1,6 +1,7 @@
 export interface ConnectionStatus {
     app: string;
     user_id: string;
+    access_token?: string;
 }
 
 export interface SaveConnectionPayload {
