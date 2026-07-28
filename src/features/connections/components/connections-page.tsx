@@ -23,6 +23,13 @@ export function ConnectionsPage() {
         window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/connection/gmail/oauth`;
     };
 
+    const notionConnection = connections?.find((c) => c.app === "notion");
+    const isNotionConnected = !!notionConnection;
+
+    const handleConnectNotion = () => {
+        window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/connection/notion/oauth`;
+    };
+
     return (
         <div className="flex-1 p-8 pt-6">
             <div className="flex items-center justify-between space-y-2 mb-8">
@@ -83,6 +90,58 @@ export function ConnectionsPage() {
                             <Button onClick={handleConnectGmail} className="w-full">
                                 <LinkIcon className="mr-2 size-4" />
                                 Connect Gmail
+                            </Button>
+                        )}
+                    </CardFooter>
+                </Card>
+                
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-xl">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    className="size-6 text-foreground"
+                                    fill="currentColor"
+                                >
+                                    <path d="M4.459 4.208c.746-.575 1.761-.92 3.14-.92h11.455c.787 0 1.258.487 1.258 1.15v14.47c0 .64-.325 1.13-1.026 1.13H7.832c-1.35 0-2.39-.364-3.11-.92-1.077-.828-1.554-2.146-1.554-4.57V8.583c0-2.22.42-3.488 1.29-4.375zm12.378 12.062v-9.45c0-.62-.43-1.06-1.05-1.06h-5.23c-.61 0-1.04.44-1.04 1.06v9.45c0 .63.43 1.06 1.04 1.06h5.23c.62 0 1.05-.43 1.05-1.06zm-7.9 0v-9.45c0-.62-.43-1.06-1.05-1.06H6.62c-.61 0-1.04.44-1.04 1.06v9.45c0 .63.43 1.06 1.04 1.06h1.267c.62 0 1.05-.43 1.05-1.06z" />
+                                </svg>
+                                Notion
+                            </CardTitle>
+                            {isLoading ? (
+                                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                            ) : isNotionConnected ? (
+                                <span className="flex items-center text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle2 className="mr-1 size-4" /> Connected
+                                </span>
+                            ) : null}
+                        </div>
+                        <CardDescription className="pt-2">
+                            Connect your Notion workspace to manage pages and databases.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1">
+                        {isNotionConnected && notionConnection?.user_id && (
+                            <div className="text-sm text-muted-foreground">
+                                Connected as <span className="font-medium text-foreground">{notionConnection.user_id}</span>
+                            </div>
+                        )}
+                    </CardContent>
+                    <CardFooter>
+                        {isLoading ? (
+                            <Button disabled className="w-full">
+                                <Loader2 className="mr-2 size-4 animate-spin" />
+                                Loading...
+                            </Button>
+                        ) : isNotionConnected ? (
+                            <Button variant="outline" className="w-full" disabled>
+                                Configuration Active
+                            </Button>
+                        ) : (
+                            <Button onClick={handleConnectNotion} className="w-full">
+                                <LinkIcon className="mr-2 size-4" />
+                                Connect Notion
                             </Button>
                         )}
                     </CardFooter>

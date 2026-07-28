@@ -13,11 +13,7 @@ function CallbackContent() {
     const hasCalledRef = useRef(false);
 
     const service = searchParams.get("service");
-    const accessToken = searchParams.get("access_token");
-    const refreshToken = searchParams.get("refresh_token");
-    const expiresIn = searchParams.get("expires_in");
-    const tokenType = searchParams.get("token_type");
-    const scope = searchParams.get("scope");
+    const payload = searchParams.get("payload");
 
     useEffect(() => {
         if (hasCalledRef.current) return;
@@ -31,22 +27,14 @@ function CallbackContent() {
             timerId = setTimeout(() => {
                 router.push("/connections");
             }, 1500);
-        } else if (service && accessToken) {
+        } else if (service && payload) {
             const save = async () => {
                 try {
                     await saveConnection({
                         user_id: "none",
                         app: service,
-                        access_token: accessToken,
-                        data: {
-                            expires_in: expiresIn ? Number(expiresIn) : 3599,
-                            refresh_token: refreshToken || "",
-                            scope: scope || "",
-                            token_type: tokenType || "Bearer",
-                            refresh_token_expires_in: searchParams.get("refresh_token_expires_in")
-                                ? Number(searchParams.get("refresh_token_expires_in"))
-                                : 604799,
-                        },
+                        access_token: JSON.parse(payload).access_token,
+                        data: JSON.parse(payload),
                     });
                     toast.success("Connection successful!");
                 } catch (err: any) {
@@ -66,7 +54,7 @@ function CallbackContent() {
         return () => {
             if (timerId) clearTimeout(timerId);
         };
-    }, [router, searchParams, service, accessToken, refreshToken, expiresIn, tokenType, scope]);
+    }, [router, searchParams, service, payload]);
 
 
     return (
