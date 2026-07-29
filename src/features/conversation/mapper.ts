@@ -37,5 +37,7 @@ export function mapAssistantMessage(
         status: "completed",
 
         tools,
+
+        toolCalls: response.message.tool_calls ?? [],
     };
 }

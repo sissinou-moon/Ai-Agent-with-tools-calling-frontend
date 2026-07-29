@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import type { Conversation, Message, MessageStatus, ToolExecution } from "../types";
+import type { ContinueChatMessage, ContinueMessageRequest, Conversation, Message, MessageStatus, ToolExecution } from "../types";
 import { useMutation } from "@tanstack/react-query";
 import { sendMessage as sendMessageApi } from "../api/send-message";
 import { mapAssistantMessage } from "../mapper";
 import { toolRegistry } from "@/features/tools/registry";
 import { useConnectionStatus } from "@/features/connections/hooks/use-connection-status";
+import { continueMessage } from "../api/continue-message";
 
 
 export function useConversation() {
@@ -133,8 +134,12 @@ export function useConversation() {
             thinking: "Thinking...",
             createdAt: new Date(),
             status: "running",
-            tools: []
+            tools: [],
+            toolCalls: []
         };
+
+        let assistantId = placeholderId;
+
         try {
             if (!input.trim()) return;
             const content = input.trim();
@@ -146,8 +151,16 @@ export function useConversation() {
                 content,
                 createdAt: new Date(),
                 status: "completed",
-                tools: []
+                tools: [],
+                toolCalls: []
             };
+
+            const history: ContinueChatMessage[] = [
+                {
+                    role: "user",
+                    content: userMessage.content,
+                },
+            ];
 
             setInput("");
 
@@ -160,32 +173,74 @@ export function useConversation() {
                 ],
             }));
 
-            const response = await mutation.mutateAsync({
+            let response = await mutation.mutateAsync({
                 message: userMessage.content,
             });
 
-            const assistantMessage =
-                mapAssistantMessage(response, placeholderId);
+            while (true) {
+                const assistantMessage = mapAssistantMessage(
+                    response,
+                    assistantId
+                );
 
-            updateConversation(activeId, (conversation) => ({
-                ...conversation,
-                messages: conversation.messages.map((message) =>
-                    message.id === assistantPlaceholder.id
-                        ? assistantMessage
-                        : message
-                ),
-            }));
+                updateConversation(activeId, (conversation) => ({
+                    ...conversation,
+                    messages: conversation.messages.map((message) =>
+                        message.id === assistantId
+                            ? assistantMessage
+                            : message
+                    ),
+                }));
 
-            await executeTools(
-                activeId,
-                assistantMessage.id,
-                assistantMessage.tools
-            );
+                if (assistantMessage.tools.length === 0) {
+                    break;
+                }
+
+                history.push({
+                    role: "assistant",
+                    content: assistantMessage.content,
+                    tool_calls: assistantMessage.toolCalls,
+                });
+
+                const toolResults = await executeTools(
+                    activeId,
+                    assistantMessage.id,
+                    assistantMessage.tools
+                );
+
+                history.push(...toolResults);
+
+                response = await continueMutation.mutateAsync({
+                    conversationId: activeId,
+                    body: {
+                        messages: history,
+                    },
+                });
+
+                assistantId = crypto.randomUUID();
+
+                updateConversation(activeId, (conversation) => ({
+                    ...conversation,
+                    messages: [
+                        ...conversation.messages,
+                        {
+                            id: assistantId,
+                            role: "assistant",
+                            content: "",
+                            thinking: "Thinking...",
+                            createdAt: new Date(),
+                            status: "running",
+                            tools: [],
+                            toolCalls: [],
+                        },
+                    ],
+                }));
+            }
         } catch (error) {
             updateConversation(activeId, (conversation) => ({
                 ...conversation,
                 messages: conversation.messages.map((message) =>
-                    message.id === assistantPlaceholder.id
+                    message.id === assistantId
                         ? {
                             ...message,
                             status: "error",
@@ -202,7 +257,12 @@ export function useConversation() {
         conversationId: string,
         messageId: string,
         tools: ToolExecution[]
-    ) => {
+    ): Promise<ContinueChatMessage[]> => {
+
+        const toolResults: ContinueChatMessage[] = [];
+
+        let previousToolResult: unknown = undefined;
+
         for (const tool of tools) {
             try {
                 updateToolStatus(
@@ -239,6 +299,17 @@ export function useConversation() {
                 const result = await registry.execute({
                     connection,
                     tool,
+                    previousToolResult: registry.usePreviousToolResult
+                        ? previousToolResult
+                        : undefined,
+                });
+
+                previousToolResult = result;
+
+                toolResults.push({
+                    role: "tool",
+                    tool_name: tool.name,
+                    content: result,
                 });
                 updateToolStatus(
                     conversationId,
@@ -260,7 +331,19 @@ export function useConversation() {
                 );
             }
         }
+
+        return toolResults;
     };
+
+    const continueMutation = useMutation({
+        mutationFn: ({
+            conversationId,
+            body,
+        }: {
+            conversationId: string;
+            body: ContinueMessageRequest;
+        }) => continueMessage(conversationId, body),
+    });
 
     return {
         conversations,

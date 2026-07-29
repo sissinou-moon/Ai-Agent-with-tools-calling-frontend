@@ -5,11 +5,13 @@ import { executeGmailAction } from "./action";
 interface ExecuteGmailParams {
     connection: ConnectionStatus;
     tool: ToolExecution;
+    previousToolResult?: unknown;
 }
 
 export async function executeGmail({
     connection,
     tool,
+    previousToolResult,
 }: ExecuteGmailParams) {
     const args = tool.arguments as {
         recipient: string;

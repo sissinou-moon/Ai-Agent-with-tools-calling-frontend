@@ -22,6 +22,8 @@ export interface Message {
     status: MessageStatus;
 
     tools: ToolExecution[];
+
+    toolCalls: ToolCall[]; // <-- add this
 }
 
 export interface Conversation {
@@ -63,4 +65,18 @@ export interface ToolExecution {
     result?: unknown;
 
     error?: string;
+}
+
+export interface ContinueMessageRequest {
+    messages: ContinueChatMessage[];
+}
+
+export interface ContinueChatMessage {
+    role: "user" | "assistant" | "tool";
+
+    content?: unknown;
+
+    tool_name?: string;
+
+    tool_calls?: ToolCall[];
 }
