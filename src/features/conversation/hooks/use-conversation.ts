@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import type { ContinueChatMessage, ContinueMessageRequest, Conversation, Message, MessageStatus, ToolExecution } from "../types";
 import { useMutation } from "@tanstack/react-query";
 import { sendMessage as sendMessageApi } from "../api/send-message";
@@ -16,6 +16,11 @@ export function useConversation() {
             messages: [],
         },
     ]);
+
+    const conversationsRef = useRef(conversations);
+    useEffect(() => {
+        conversationsRef.current = conversations;
+    }, [conversations]);
 
     const [activeId, setActiveId] = useState(conversations[0].id);
 
@@ -261,7 +266,17 @@ export function useConversation() {
 
         const toolResults: ContinueChatMessage[] = [];
 
-        let previousToolResult: unknown = undefined;
+        const previousToolResults = new Map<string, unknown>();
+        const currentConversation = conversationsRef.current.find(c => c.id === conversationId);
+        if (currentConversation) {
+            for (const msg of currentConversation.messages) {
+                for (const t of msg.tools) {
+                    if (t.status === "completed" && t.result) {
+                        previousToolResults.set(t.name, t.result);
+                    }
+                }
+            }
+        }
 
         for (const tool of tools) {
             try {
@@ -292,19 +307,19 @@ export function useConversation() {
                 const connection =
                     connectionMap[registry.app];
 
-                if (!connection) {
+                if (!connection && registry.app !== "core") {
                     throw new Error(`${registry.app} is not connected.`);
                 }
 
                 const result = await registry.execute({
-                    connection,
+                    connection: connection as any,
                     tool,
                     previousToolResult: registry.usePreviousToolResult
-                        ? previousToolResult
+                        ? previousToolResults
                         : undefined,
                 });
 
-                previousToolResult = result;
+                previousToolResults.set(tool.name, result);
 
                 toolResults.push({
                     role: "tool",

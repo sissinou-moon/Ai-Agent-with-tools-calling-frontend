@@ -155,3 +155,30 @@ export async function executeNotionDBSchema(
     return response.json();
 
 }
+
+export async function executeBusinessEventsAction() {
+    const accessToken = (await cookies())
+        .get(COOKIE_NAMES.ACCESS_TOKEN)
+        ?.value;
+
+    if (!accessToken) {
+        throw new Error("User not authenticated.");
+    }
+
+    const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/connection/events`,
+        {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+            },
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(await response.text());
+    }
+
+    return response.json();
+}

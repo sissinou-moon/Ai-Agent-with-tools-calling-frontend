@@ -1,5 +1,6 @@
 import { executeGmail } from "./gmail";
 import { executeNotion, executeNotionDatabases, executeNotionDatabaseSchema } from "./notion";
+import { executeBusinessEvents } from "./events";
 
 export const toolRegistry = {
     gmail_send_email: {
@@ -22,4 +23,9 @@ export const toolRegistry = {
         execute: executeNotionDatabaseSchema,
         usePreviousToolResult: false,
     },
+    get_business_events: {
+        app: "core",
+        execute: executeBusinessEvents,
+        usePreviousToolResult: false,
+    }
 };
