@@ -22,10 +22,25 @@ export function ToolCard({ tool }: ToolCardProps) {
                     {statusMap[tool.status]}
                 </span>
             </div>
-
-            <pre className="mt-3 overflow-auto rounded-lg bg-background p-3 text-xs">
-                {JSON.stringify(tool.arguments, null, 2)}
-            </pre>
+            {
+                tool.status === "running" && (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                        "Waiting for human approval"
+                    </p>
+                )
+            }
+            {
+                tool.status === "completed" && (
+                    <pre className="mt-3 overflow-auto rounded-lg bg-background p-3 text-xs">
+                        {JSON.stringify(tool.result, null, 2)}
+                    </pre>
+                )
+            }
+            {tool.error && (
+                <pre className="mt-3 overflow-auto rounded-lg bg-background p-3 text-xs">
+                    {JSON.stringify(tool.error, null, 2)}
+                </pre>
+            )}
         </div>
     );
 }

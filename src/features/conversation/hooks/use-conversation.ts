@@ -6,6 +6,7 @@ import { mapAssistantMessage } from "../mapper";
 import { toolRegistry } from "@/features/tools/registry";
 import { useConnectionStatus } from "@/features/connections/hooks/use-connection-status";
 import { continueMessage } from "../api/continue-message";
+import { toast } from "sonner";
 
 
 export function useConversation() {
@@ -334,15 +335,19 @@ export function useConversation() {
                     result
                 );
             } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                
+                if (errorMessage.includes("Token has been expired or revoked")) {
+                    toast.error("Your email connection has been revoked. Please reconnect your account.");
+                }
+
                 updateToolStatus(
                     conversationId,
                     messageId,
                     tool.id,
                     "error",
                     undefined,
-                    error instanceof Error
-                        ? error.message
-                        : "Unknown error"
+                    errorMessage
                 );
             }
         }
