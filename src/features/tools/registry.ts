@@ -1,4 +1,4 @@
-import { executeGmail } from "./gmail";
+import { executeGmail, executeGmailGetEmailIds, executeGmailGetEmails } from "./gmail";
 import { executeNotion, executeNotionDatabases, executeNotionDatabaseSchema } from "./notion";
 import { executeBusinessEvents } from "./events";
 
@@ -7,6 +7,16 @@ export const toolRegistry = {
         app: "gmail",
         execute: executeGmail,
         usePreviousToolResult: true,
+    },
+    gmail_get_email_ids: {
+        app: "gmail",
+        execute: executeGmailGetEmailIds,
+        usePreviousToolResult: false,
+    },
+    gmail_get_emails: {
+        app: "gmail",
+        execute: executeGmailGetEmails,
+        usePreviousToolResult: false,
     },
     notion_add_row_database: {
         app: "notion",

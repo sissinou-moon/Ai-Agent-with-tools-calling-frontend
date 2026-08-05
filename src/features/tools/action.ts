@@ -41,6 +41,86 @@ export async function executeGmailAction(body: {
     return response.json();
 }
 
+export async function executeGmailGetEmailIdsAction(body: {
+    gmailAccessToken: string;
+    query: string;
+    limit: number;
+}) {
+    const accessToken = (await cookies())
+        .get(COOKIE_NAMES.ACCESS_TOKEN)
+        ?.value;
+
+    if (!accessToken) {
+        throw new Error("User not authenticated.");
+    }
+
+    const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/connection/gmail/emails`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                access_token: body.gmailAccessToken,
+                query: body.query,
+                limit: body.limit,
+            }),
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(await response.text());
+    }
+
+    return response.json();
+}
+
+export async function executeGmailGetEmailsAction(body: {
+    gmailAccessToken: string;
+    emailIds: string[];
+}) {
+    const accessToken = (await cookies())
+        .get(COOKIE_NAMES.ACCESS_TOKEN)
+        ?.value;
+
+    if (!accessToken) {
+        throw new Error("User not authenticated.");
+    }
+
+    const results = [];
+    for (const messageId of body.emailIds) {
+        try {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/connection/gmail/email/details`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        access_token: body.gmailAccessToken,
+                        message_id: messageId,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                console.error(`Failed to fetch email details for ${messageId}:`, await response.text());
+                continue;
+            }
+
+            results.push(await response.json());
+        } catch (error) {
+            console.error(`Error fetching email details for ${messageId}:`, error);
+        }
+    }
+
+    return results;
+}
+
 export async function executeNotionNewDatabaseRow(body:
     {
         notionAccessToken: string;

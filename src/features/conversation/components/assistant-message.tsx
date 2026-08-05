@@ -3,6 +3,7 @@ import { Thinking } from "./thinking";
 import { ToolList } from "./tool-list";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { SparklesIcon } from "lucide-react";
 
 interface AssistantMessageProps {
     message: Message;
@@ -11,16 +12,19 @@ interface AssistantMessageProps {
 export function AssistantMessage({
     message,
 }: AssistantMessageProps) {
+    const isWaiting = message.status === "running" || message.status === "pending";
+    const hasThinkingContent = message.thinking && message.thinking !== "Thinking...";
+
     return (
-        <div className="max-w-4xl space-y-3">
-            {message.thinking && (
-                <Thinking thinking={message.thinking} />
+        <div className="max-w-4xl space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {hasThinkingContent && (
+                <Thinking thinking={message.thinking as string} />
             )}
 
             <ToolList tools={message.tools} />
 
             {message.content && (
-                <div className="rounded-xl bg-muted/40 p-4 markdown-prose">
+                <div className="rounded-2xl bg-muted/30 p-5 shadow-sm border border-border/50 markdown-prose">
                     <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
                         components={{
@@ -42,7 +46,7 @@ export function AssistantMessage({
                                         {children}
                                     </code>
                                 ) : (
-                                    <code className="block bg-muted p-3 rounded-lg overflow-x-auto text-sm mb-2 mt-1" {...props}>
+                                    <code className="block bg-[#0d1117] text-[#e6edf3] p-4 rounded-xl overflow-x-auto text-sm mb-2 mt-1 shadow-inner border border-border/50 font-mono" {...props}>
                                         {children}
                                     </code>
                                 );
@@ -51,6 +55,16 @@ export function AssistantMessage({
                     >
                         {message.content}
                     </ReactMarkdown>
+                </div>
+            )}
+
+            {isWaiting && !message.content && (
+                <div className="flex items-center gap-3 text-muted-foreground p-3 rounded-xl border bg-muted/20">
+                     <div className="relative flex size-6 items-center justify-center">
+                         <div className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40 opacity-75"></div>
+                         <SparklesIcon className="relative size-3 text-primary animate-pulse" />
+                     </div>
+                     <span className="text-sm font-medium animate-pulse tracking-tight text-primary/80">AI is analyzing and working on your request...</span>
                 </div>
             )}
         </div>
