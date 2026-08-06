@@ -29,11 +29,6 @@ const navItems = [
     icon: ZapIcon,
   },
   {
-    title: "Events",
-    href: "/events",
-    icon: CalendarIcon,
-  },
-  {
     title: "Webhook",
     href: "/webhook",
     icon: WebhookIcon,

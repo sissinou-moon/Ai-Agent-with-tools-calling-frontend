@@ -45,7 +45,7 @@ async function getAccessToken(): Promise<string> {
 }
 
 // ─── Helper: Authenticated fetch with auto-refresh on 401 ───
-async function authenticatedFetch(
+export async function authenticatedFetch(
     url: string,
     options: RequestInit = {}
 ): Promise<Response> {

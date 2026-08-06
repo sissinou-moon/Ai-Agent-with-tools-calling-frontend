@@ -1,134 +1,137 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import {
-  PlusIcon,
-  CopyIcon,
-  MoreHorizontalIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-} from "lucide-react";
-
-const webhooks = [
-  {
-    id: 1,
-    name: "Order Notifications",
-    url: "https://api.example.com/webhooks/orders",
-    method: "POST",
-    active: true,
-    lastTriggered: "5 min ago",
-    successRate: 99.2,
-  },
-  {
-    id: 2,
-    name: "User Signup",
-    url: "https://hooks.slack.com/services/T00/B00/xxx",
-    method: "POST",
-    active: true,
-    lastTriggered: "32 min ago",
-    successRate: 100,
-  },
-  {
-    id: 3,
-    name: "Error Alerts",
-    url: "https://api.pagerduty.com/webhooks",
-    method: "POST",
-    active: false,
-    lastTriggered: "2 days ago",
-    successRate: 87.5,
-  },
-  {
-    id: 4,
-    name: "Analytics Sync",
-    url: "https://analytics.internal.io/ingest",
-    method: "PUT",
-    active: true,
-    lastTriggered: "1 hour ago",
-    successRate: 98.8,
-  },
-];
+import { CopyIcon, WebhookIcon } from "lucide-react";
+import { fetchWebhookEvents, fetchWebhookToken } from "@/features/webhook/actions";
+import type { WebhookEvent } from "@/features/webhook/types";
+import { toast } from "sonner";
 
 export default function WebhookPage() {
-  return (
-    <div className="flex h-full flex-col">
-      {/* Header */}
-      <header className="flex h-14 shrink-0 items-center border-b border-border/40 bg-background/80 backdrop-blur-sm">
-        <div className="flex items-center gap-2 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-vertical:h-4 data-vertical:self-auto"
-          />
-          <h1 className="text-sm font-semibold">Webhooks</h1>
-        </div>
-        <div className="ml-auto px-4">
-          <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
-            <PlusIcon className="size-4" />
-            Add Webhook
-          </button>
-        </div>
-      </header>
+    const [events, setEvents] = useState<WebhookEvent[]>([]);
+    const [token, setToken] = useState<string>("");
+    const [loading, setLoading] = useState(true);
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto max-w-4xl space-y-4">
-          {webhooks.map((webhook) => (
-            <div
-              key={webhook.id}
-              className="group rounded-xl border border-border/40 bg-card/50 p-4 transition-all hover:border-border/60 hover:bg-card/80"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div
-                    className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg ${
-                      webhook.active
-                        ? "bg-emerald-500/10"
-                        : "bg-muted"
-                    }`}
-                  >
-                    {webhook.active ? (
-                      <CheckCircleIcon className="size-4 text-emerald-400" />
-                    ) : (
-                      <XCircleIcon className="size-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium">{webhook.name}</h3>
-                      <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-                        {webhook.method}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-1.5">
-                      <code className="text-xs text-muted-foreground truncate max-w-[400px] block">
-                        {webhook.url}
-                      </code>
-                      <button className="shrink-0 rounded-sm p-0.5 text-muted-foreground/40 hover:text-muted-foreground">
-                        <CopyIcon className="size-3" />
-                      </button>
-                    </div>
-                    <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground/60">
-                      <span>Last triggered {webhook.lastTriggered}</span>
-                      <span>·</span>
-                      <span
-                        className={
-                          webhook.successRate >= 95
-                            ? "text-emerald-400/80"
-                            : "text-amber-400/80"
-                        }
-                      >
-                        {webhook.successRate}% success
-                      </span>
-                    </div>
-                  </div>
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const webhookUrl = token ? `${API_URL}/api/v1/webhook/events/save/${token}` : "";
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const [eventsRes, tokenRes] = await Promise.all([
+                    fetchWebhookEvents(),
+                    fetchWebhookToken(),
+                ]);
+                
+                if (eventsRes.success && eventsRes.data) {
+                    setEvents(eventsRes.data);
+                }
+                
+                if (tokenRes.success && tokenRes.token) {
+                    setToken(tokenRes.token);
+                }
+            } catch (err) {
+                console.error("Failed to load webhook data", err);
+                toast.error("Failed to load webhook data");
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        loadData();
+    }, []);
+
+    const copyUrl = () => {
+        if (!webhookUrl) return;
+        navigator.clipboard.writeText(webhookUrl);
+        toast.success("Webhook URL copied to clipboard");
+    };
+
+    return (
+        <div className="flex h-full flex-col">
+            <header className="flex h-14 shrink-0 items-center border-b border-border/40 bg-background/80 backdrop-blur-sm">
+                <div className="flex items-center gap-2 px-4">
+                    <SidebarTrigger className="-ml-1" />
+                    <Separator orientation="vertical" className="mr-2 h-4" />
+                    <h1 className="text-sm font-semibold">Webhooks</h1>
                 </div>
-                <button className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100">
-                  <MoreHorizontalIcon className="size-4" />
-                </button>
-              </div>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                <div className="mx-auto max-w-4xl space-y-4">
+                    
+                    {/* Webhook Configuration */}
+                    <div className="rounded-xl border border-border/40 bg-card/50 p-6 space-y-4">
+                        <div className="flex items-center gap-2">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                                <WebhookIcon className="size-5 text-primary" />
+                            </div>
+                            <h2 className="text-lg font-medium">Your Webhook URL</h2>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            Send POST requests to this URL to trigger events in your workspace.
+                        </p>
+                        
+                        <div className="flex items-center gap-2 mt-4">
+                            <code className="flex-1 rounded-md bg-muted px-4 py-3 text-sm border font-mono break-all text-muted-foreground">
+                                {loading ? "Loading..." : webhookUrl}
+                            </code>
+                            <button 
+                                onClick={copyUrl}
+                                disabled={!webhookUrl}
+                                className="shrink-0 p-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+                            >
+                                <CopyIcon className="size-4" />
+                            </button>
+                        </div>
+                        
+                        <div className="mt-4 text-xs text-muted-foreground bg-muted/50 p-3 rounded-md border">
+                            <strong>Expected Payload format:</strong>
+                            <pre className="mt-2 text-[11px] font-mono whitespace-pre-wrap">
+{`{
+    "type": "order.created",
+    "data": {
+        "orderId": "123",
+        "amount": 99.99
+    }
+}`}
+                            </pre>
+                        </div>
+                    </div>
+
+                    {/* Events List */}
+                    <div className="space-y-4">
+                        <h2 className="text-lg font-medium">Recent Events</h2>
+                        
+                        {loading ? (
+                            <div className="text-sm text-muted-foreground text-center py-8">Loading events...</div>
+                        ) : events.length === 0 ? (
+                            <div className="rounded-xl border border-border/40 border-dashed bg-card/20 p-8 text-center text-sm text-muted-foreground">
+                                No events received yet. Send a request to your webhook URL to see them here.
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {events.map((event) => (
+                                    <div key={event.id} className="rounded-xl border border-border/40 bg-card/30 p-4 hover:bg-card/50 transition-colors">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <span className="font-mono text-xs font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md">
+                                                {event.type}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {new Date(event.created_at).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <pre className="text-xs bg-muted/30 p-3 rounded-md overflow-x-auto text-muted-foreground font-mono mt-2">
+                                            {JSON.stringify(event.data, null, 2)}
+                                        </pre>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
-          ))}
         </div>
-      </div>
-    </div>
-  );
+    );
 }
