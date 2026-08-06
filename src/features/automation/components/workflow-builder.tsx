@@ -20,6 +20,7 @@ import type {
     WorkflowStep,
     NotionColumnMapping,
     CreateWorkflowPayload,
+    NotionArgs,
 } from "../types";
 import { toast } from "sonner";
 
@@ -166,7 +167,7 @@ export function WorkflowBuilder({ onSaved, initialData }: WorkflowBuilderProps) 
         }
 
         if (enabledTools.has("add_row")) {
-            const notionArgs: Record<string, string> = {
+            const notionArgs: NotionArgs = {
                 database_id: notionDatabaseId,
             };
             notionColumns.forEach((col) => {
@@ -474,21 +475,65 @@ export function WorkflowBuilder({ onSaved, initialData }: WorkflowBuilderProps) 
                                 </div>
                             )}
 
-                            {/* Add more columns button when columns exist */}
+                            {/* Manual Columns List */}
                             {notionColumns.length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setNotionColumns([
-                                            ...notionColumns,
-                                            { columnName: "", payloadField: "" },
-                                        ])
-                                    }
-                                    className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 px-2.5 py-1.5 text-[11px] font-medium text-violet-400 hover:bg-violet-500/20 transition-colors"
-                                >
-                                    <PlusIcon className="size-3" />
-                                    Add Column
-                                </button>
+                                <div className="space-y-2 mt-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-xs font-medium text-muted-foreground">
+                                            Column Mappings
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setNotionColumns([
+                                                    ...notionColumns,
+                                                    { columnName: "", payloadField: "" },
+                                                ])
+                                            }
+                                            className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 px-2.5 py-1.5 text-[11px] font-medium text-violet-400 hover:bg-violet-500/20 transition-colors"
+                                        >
+                                            <PlusIcon className="size-3" />
+                                            Add Column
+                                        </button>
+                                    </div>
+
+                                    {notionColumns.map((col, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={col.columnName}
+                                                onChange={(e) => {
+                                                    const newCols = [...notionColumns];
+                                                    newCols[index] = { ...newCols[index], columnName: e.target.value };
+                                                    setNotionColumns(newCols);
+                                                }}
+                                                placeholder="Column Name (e.g. Customer)"
+                                                className="flex-1 rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/20 transition-all"
+                                            />
+                                            <span className="text-muted-foreground/40">→</span>
+                                            <input
+                                                type="text"
+                                                value={col.payloadField}
+                                                onChange={(e) => {
+                                                    const newCols = [...notionColumns];
+                                                    newCols[index] = { ...newCols[index], payloadField: e.target.value };
+                                                    setNotionColumns(newCols);
+                                                }}
+                                                placeholder="{{payload.field}}"
+                                                className="flex-1 rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-sm font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/20 transition-all"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setNotionColumns(notionColumns.filter((_, i) => i !== index));
+                                                }}
+                                                className="rounded-md p-1.5 text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                                            >
+                                                <XIcon className="size-3.5" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     </div>

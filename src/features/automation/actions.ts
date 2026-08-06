@@ -154,11 +154,22 @@ export async function triggerWorkflow(
 
 // ─── Notion: List Databases ───
 export async function fetchNotionDatabases(): Promise<NotionDatabase[]> {
+    const statusResponse = await authenticatedFetch(`${API_URL}/api/v1/connection/status`);
+    if (!statusResponse.ok) {
+        throw new Error("Failed to fetch connection status");
+    }
+    const status = await statusResponse.json();
+    const notionConn = status.find((s: any) => s.app === "notion");
+
+    if (!notionConn || !notionConn.access_token) {
+        throw new Error("Notion is not connected");
+    }
+
     const response = await authenticatedFetch(
         `${API_URL}/api/v1/connection/notion/databases`,
         {
             method: "POST",
-            body: JSON.stringify({}),
+            body: JSON.stringify({ access_token: notionConn.access_token }),
         }
     );
     if (!response.ok) {
@@ -172,11 +183,22 @@ export async function fetchNotionDatabases(): Promise<NotionDatabase[]> {
 export async function fetchNotionDatabaseSchema(
     databaseId: string
 ): Promise<NotionDatabaseSchema> {
+    const statusResponse = await authenticatedFetch(`${API_URL}/api/v1/connection/status`);
+    if (!statusResponse.ok) {
+        throw new Error("Failed to fetch connection status");
+    }
+    const status = await statusResponse.json();
+    const notionConn = status.find((s: any) => s.app === "notion");
+
+    if (!notionConn || !notionConn.access_token) {
+        throw new Error("Notion is not connected");
+    }
+
     const response = await authenticatedFetch(
         `${API_URL}/api/v1/connection/notion/database/schema`,
         {
             method: "POST",
-            body: JSON.stringify({ database_id: databaseId }),
+            body: JSON.stringify({ access_token: notionConn.access_token, database_id: databaseId }),
         }
     );
     if (!response.ok) {

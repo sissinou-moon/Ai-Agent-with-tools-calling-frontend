@@ -41,6 +41,7 @@ export interface Workflow {
     user_id: string;
     created_at: string;
     updated_at: string;
+    steps?: WorkflowStep[];
 }
 
 // ─── Trigger Workflow ───

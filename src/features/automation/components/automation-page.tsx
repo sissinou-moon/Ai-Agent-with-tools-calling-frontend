@@ -92,7 +92,7 @@ export function AutomationPage() {
                                 onSaved={() => setIsEditing(false)}
                                 initialData={
                                     activeWorkflow
-                                        ? { name: activeWorkflow.name, steps: [] } // In a full implementation, you'd fetch/pass the full workflow steps here if editing
+                                        ? { name: activeWorkflow.name, steps: (activeWorkflow as any).steps || [] }
                                         : undefined
                                 }
                             />
