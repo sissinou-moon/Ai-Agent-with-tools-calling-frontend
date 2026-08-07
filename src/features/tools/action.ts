@@ -246,7 +246,7 @@ export async function executeBusinessEventsAction() {
     }
 
     const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/connection/events`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/webhook/events`,
         {
             method: "GET",
             headers: {
